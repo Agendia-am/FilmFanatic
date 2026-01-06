@@ -19,12 +19,28 @@ from pathlib import Path
 import concurrent.futures
 from datetime import datetime
 
+# Playwright support (used for faster, modern browser automation)
+try:
+    from playwright.sync_api import sync_playwright
+    from playwright.async_api import async_playwright
+    PLAYWRIGHT_AVAILABLE = True
+    PLAYWRIGHT_ASYNC_AVAILABLE = True
+except Exception:
+    sync_playwright = None
+    async_playwright = None
+    PLAYWRIGHT_AVAILABLE = False
+    PLAYWRIGHT_ASYNC_AVAILABLE = False
+
 class FilmScraper:
-    def __init__(self, use_selenium=True, browser='chrome', debug=False):
+    def __init__(self, use_selenium=True, browser='chrome', debug=False, use_playwright=True):
         self.use_selenium = use_selenium
         self.browser_type = browser
+        # Prefer Playwright by default when available
+        self.use_playwright = use_playwright and PLAYWRIGHT_AVAILABLE
         self.session = requests.Session()
         self.browser = None
+        self._pw = None
+        self._pw_browser = None
         self.debug = debug
         
         # Setup logging
@@ -44,6 +60,11 @@ class FilmScraper:
             'Upgrade-Insecure-Requests': '1'
         })
         
+        # Start Playwright first (preferred). If it fails or is unavailable,
+        # we fall back to Selenium or requests.
+        if self.use_playwright:
+            self.setup_playwright()
+
         if use_selenium:
             self.setup_browser()
 
@@ -100,6 +121,21 @@ class FilmScraper:
         service = FirefoxService(GeckoDriverManager().install())
         return webdriver.Firefox(service=service, options=firefox_options)
 
+    def setup_playwright(self):
+        """Start Playwright and launch a single browser instance to reuse across requests."""
+        if not PLAYWRIGHT_AVAILABLE:
+            print("Playwright is not installed. Install with `pip install playwright` and run `playwright install` to use this feature.")
+            self.use_playwright = False
+            return
+
+        try:
+            self._pw = sync_playwright().start()
+            # Use chromium for best compatibility and speed
+            self._pw_browser = self._pw.chromium.launch(headless=True)
+        except Exception as e:
+            print(f"Failed to start Playwright: {e}")
+            self.use_playwright = False
+
     def get_page_content(self, url, retries=3):
         """Get page content using available method"""
         if not url or url == 'None' or not isinstance(url, str):
@@ -107,13 +143,18 @@ class FilmScraper:
             
         if not url.startswith(('http://', 'https://')):
             return None
-            
         for attempt in range(retries):
             try:
+                # Prefer Playwright if requested and available
+                if self.use_playwright and getattr(self, '_pw_browser', None):
+                    content = self._get_content_playwright(url)
+                    if content:
+                        return content
+
                 if self.use_selenium and self.browser:
                     return self._get_content_selenium(url)
-                else:
-                    return self._get_content_requests(url)
+
+                return self._get_content_requests(url)
             except Exception as e:
                 if self.debug:
                     print(f"Attempt {attempt + 1} failed for {url}: {e}")
@@ -153,6 +194,32 @@ class FilmScraper:
         response = self.session.get(url, timeout=15)
         response.raise_for_status()
         return response.text
+
+    def _get_content_playwright(self, url):
+        """Get page content using a persistent Playwright browser. Opens/ closes a page per request."""
+        if not self._pw_browser:
+            return None
+        page = None
+        try:
+            page = self._pw_browser.new_page()
+            page.goto(url, timeout=15000)
+            try:
+                page.wait_for_selector("h1.filmtitle", timeout=8000)
+            except Exception:
+                # not all pages have that selector; continue
+                pass
+            html = page.content()
+            return html
+        except Exception as e:
+            if self.debug:
+                print(f"Playwright fetch failed for {url}: {e}")
+            return None
+        finally:
+            try:
+                if page:
+                    page.close()
+            except Exception:
+                pass
 
     def scrape_film_details(self, film_url):
         """Scrape detailed information from a single film page"""
@@ -195,6 +262,47 @@ class FilmScraper:
         }
         
         return film_data
+
+    def _scrape_film_requests(self, film_url):
+        """Scrape a single film page using requests (safe for parallel workers)."""
+        if not film_url or film_url == 'None' or not isinstance(film_url, str):
+            return self.create_minimal_film_data(film_url or "Invalid URL", "Invalid or missing URL")
+
+        try:
+            session = requests.Session()
+            session.headers.update(self.session.headers if hasattr(self, 'session') else {})
+            resp = session.get(film_url, timeout=15)
+            resp.raise_for_status()
+            html = resp.text
+        except Exception as e:
+            return self.create_minimal_film_data(film_url, f"Failed to get page content: {e}")
+
+        try:
+            soup = BeautifulSoup(html, 'html.parser')
+
+            # Reuse the same extraction helpers that operate on a BeautifulSoup object
+            film_data = {
+                'url': film_url,
+                'title': self.extract_title(soup),
+                'release_date': self.extract_release_date(soup),
+                'runtime': self.extract_runtime(soup),
+                'genres': self.extract_genres(soup),
+                'directors': self.extract_directors(soup),
+                'actors': self.extract_actors(soup),
+                'studios': self.extract_studios(soup),
+                'language': self.extract_language(soup),
+                'country': self.extract_country(soup),
+                'writers': self.extract_writers(soup),
+                'composer': self.extract_composer(soup),
+                'cinematographer': self.extract_cinematographer(soup),
+                'average_rating': self.extract_average_rating(soup),
+                'description': self.extract_description(soup),
+                'scrape_status': 'success',
+                'last_scraped': datetime.now().isoformat()
+            }
+            return film_data
+        except Exception as e:
+            return self.create_minimal_film_data(film_url, f"Parse error: {e}")
 
     def extract_title(self, soup):
         """Extract film title with multiple selectors"""
@@ -397,7 +505,27 @@ class FilmScraper:
         return link.get_text().strip() if link else None
     
     def extract_average_rating(self, soup):
-        """Extract average community rating"""
+        """Extract average community rating from JSON-LD schema"""
+        # First, try to extract from JSON-LD schema embedded in script tag
+        script_tags = soup.find_all('script', type='application/ld+json')
+        for script in script_tags:
+            try:
+                content = script.string
+                if content:
+                    # Remove CDATA wrapper if present
+                    content = re.sub(r'/\*\s*<!\[CDATA\[\s*\*/', '', content)
+                    content = re.sub(r'/\*\s*\]\]>\s*\*/', '', content)
+                    content = content.strip()
+                    
+                    data = json.loads(content)
+                    if isinstance(data, dict) and 'aggregateRating' in data:
+                        rating = data['aggregateRating'].get('ratingValue')
+                        if rating:
+                            return str(rating)
+            except (json.JSONDecodeError, AttributeError, TypeError):
+                continue
+        
+        # Fallback: Try CSS selectors
         selectors = [
             ".average-rating .rating",
             ".film-stats .rating",
@@ -419,6 +547,11 @@ class FilmScraper:
                 if rating_match:
                     return rating_match.group(1)
         
+        # Fallback: meta tag
+        meta = soup.find('meta', property='letterboxd:average_rating')
+        if meta and meta.get('content'):
+            return meta.get('content')
+
         return None
 
     def extract_description(self, soup):
@@ -466,7 +599,7 @@ class FilmScraper:
             'last_scraped': datetime.now().isoformat()
         }
 
-    def scrape_all_films(self, all_films, max_films=None, start_index=0):
+    def scrape_all_films(self, all_films, max_films=None, start_index=0, parallel_workers=None):
         """Scrape details for all films in the list"""
         detailed_films = []
         
@@ -485,34 +618,76 @@ class FilmScraper:
         
         try:
             films_to_process = valid_films[start_index:start_index + max_films] if max_films else valid_films[start_index:]
-            
-            for idx, film in enumerate(films_to_process, start=start_index + 1):
-                print(f"\n[{idx}/{len(valid_films)}] Processing: {film.get('title', 'Unknown')}")
-                
-                film_details = self.scrape_film_details(film['url'])
-                if film_details:
-                    detailed_films.append(film_details)
-                    if film_details.get('scrape_status') == 'success':
-                        print(f"✓ Successfully scraped: {film_details['title']}")
-                        if film_details.get('average_rating'):
-                            print(f"  Rating: {film_details['average_rating']}/5")
-                    else:
-                        print(f"⚠ Partially scraped: {film_details['title']} - {film_details.get('scrape_status')}")
-                
-                time.sleep(random.uniform(2, 4))
-                
-                if self.use_selenium and self.browser and idx % 100 == 0:
-                    print("Refreshing browser...")
-                    self.browser.quit()
-                    self.setup_browser()
+
+            # Parallel mode
+            if parallel_workers and parallel_workers > 1:
+                print(f"Starting parallel scrape with {parallel_workers} workers...")
+
+                # Prefer async Playwright parallel scraper when Playwright is enabled and async API is available
+                if self.use_playwright and PLAYWRIGHT_ASYNC_AVAILABLE:
+                    pw_results = self._run_playwright_parallel(films_to_process, parallel_workers)
+                    for completed, film_details in enumerate(pw_results, start=1):
+                        idx = start_index + completed
+                        film = films_to_process[completed - 1]
+                        print(f"\n[{idx}/{len(valid_films)}] Processing (playwright parallel): {film.get('title', 'Unknown')}")
+                        detailed_films.append(film_details)
+                        if film_details.get('scrape_status') == 'success':
+                            print(f"✓ Successfully scraped: {film_details['title']}")
+                            if film_details.get('average_rating'):
+                                print(f"  Rating: {film_details['average_rating']}/5")
+                        else:
+                            print(f"⚠ Partially scraped: {film_details['title']} - {film_details.get('scrape_status')}")
+                else:
+                    # Fallback to requests-based ThreadPoolExecutor
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_workers) as exc:
+                        future_map = {exc.submit(self._scrape_film_requests, film['url']): film for film in films_to_process}
+                        completed = 0
+                        for future in concurrent.futures.as_completed(future_map):
+                            film = future_map[future]
+                            completed += 1
+                            idx = start_index + completed
+                            print(f"\n[{idx}/{len(valid_films)}] Processing (parallel): {film.get('title', 'Unknown')}")
+                            try:
+                                film_details = future.result()
+                            except Exception as e:
+                                film_details = self.create_minimal_film_data(film.get('url'), f"Worker error: {e}")
+
+                            detailed_films.append(film_details)
+                            if film_details.get('scrape_status') == 'success':
+                                print(f"✓ Successfully scraped: {film_details['title']}")
+                                if film_details.get('average_rating'):
+                                    print(f"  Rating: {film_details['average_rating']}/5")
+                            else:
+                                print(f"⚠ Partially scraped: {film_details['title']} - {film_details.get('scrape_status')}")
+
+            else:
+                for idx, film in enumerate(films_to_process, start=start_index + 1):
+                    print(f"\n[{idx}/{len(valid_films)}] Processing: {film.get('title', 'Unknown')}")
                     
+                    film_details = self.scrape_film_details(film['url'])
+                    if film_details:
+                        detailed_films.append(film_details)
+                        if film_details.get('scrape_status') == 'success':
+                            print(f"✓ Successfully scraped: {film_details['title']}")
+                            if film_details.get('average_rating'):
+                                print(f"  Rating: {film_details['average_rating']}/5")
+                        else:
+                            print(f"⚠ Partially scraped: {film_details['title']} - {film_details.get('scrape_status')}")
+                    
+                    time.sleep(random.uniform(2, 4))
+                    
+                    if self.use_selenium and self.browser and idx % 100 == 0:
+                        print("Refreshing browser...")
+                        self.browser.quit()
+                        self.setup_browser()
+
         except KeyboardInterrupt:
-            print("\nScraping interrupted by user. Saving current progress...")
+            print("\nScraping interrupted by user.")
         except Exception as e:
             print(f"Critical error during scraping: {e}")
         finally:
             self.cleanup()
-        
+
         return detailed_films
 
     def save_progress(self, films, filename):
@@ -521,12 +696,110 @@ class FilmScraper:
             json.dump(films, f, indent=2, ensure_ascii=False)
         print(f"Progress saved: {len(films)} films to {filename}")
 
+    def _run_playwright_parallel(self, films_to_process, parallel_workers):
+        """Run the async Playwright parallel scraper and return results (sync wrapper)."""
+        try:
+            return asyncio.run(self._playwright_parallel_scrape(films_to_process, parallel_workers))
+        except Exception as e:
+            # If asyncio.run fails (e.g., already running event loop), fall back to sequential requests
+            print(f"Playwright parallel runner failed: {e}")
+            results = []
+            for film in films_to_process:
+                results.append(self._scrape_film_requests(film['url']))
+            return results
+
+    async def _playwright_parallel_scrape(self, films_to_process, parallel_workers):
+        """Async Playwright scraper that opens multiple pages concurrently using a single browser."""
+        if not PLAYWRIGHT_ASYNC_AVAILABLE:
+            raise RuntimeError("Async Playwright API not available")
+
+        results = []
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                semaphore = asyncio.Semaphore(parallel_workers)
+
+                async def fetch(film):
+                    url = film['url']
+                    async with semaphore:
+                        page = await browser.new_page()
+                        try:
+                            await page.goto(url, timeout=15000)
+                            try:
+                                await page.wait_for_selector("h1.filmtitle", timeout=8000)
+                            except Exception:
+                                pass
+                            html = await page.content()
+                        except Exception as e:
+                            try:
+                                await page.close()
+                            except Exception:
+                                pass
+                            return self.create_minimal_film_data(url, f"Playwright fetch error: {e}")
+                        try:
+                            soup = BeautifulSoup(html, 'html.parser')
+                            film_data = {
+                                'url': url,
+                                'title': self.extract_title(soup),
+                                'release_date': self.extract_release_date(soup),
+                                'runtime': self.extract_runtime(soup),
+                                'genres': self.extract_genres(soup),
+                                'directors': self.extract_directors(soup),
+                                'actors': self.extract_actors(soup),
+                                'studios': self.extract_studios(soup),
+                                'language': self.extract_language(soup),
+                                'country': self.extract_country(soup),
+                                'writers': self.extract_writers(soup),
+                                'composer': self.extract_composer(soup),
+                                'cinematographer': self.extract_cinematographer(soup),
+                                'average_rating': self.extract_average_rating(soup),
+                                'description': self.extract_description(soup),
+                                'scrape_status': 'success',
+                                'last_scraped': datetime.now().isoformat()
+                            }
+                            try:
+                                await page.close()
+                            except Exception:
+                                pass
+                            return film_data
+                        except Exception as e:
+                            try:
+                                await page.close()
+                            except Exception:
+                                pass
+                            return self.create_minimal_film_data(url, f"Parse error: {e}")
+
+                tasks = [asyncio.create_task(fetch(f)) for f in films_to_process]
+                completed = await asyncio.gather(*tasks)
+                await browser.close()
+                results = completed
+        except Exception as e:
+            print(f"Playwright parallel scraping failed: {e}")
+            # Fallback to requests-based scraping
+            results = [self._scrape_film_requests(f['url']) for f in films_to_process]
+
+        return results
+
     def cleanup(self):
         """Clean up resources"""
         if self.browser:
             self.browser.quit()
         if hasattr(self.session, 'close'):
             self.session.close()
+        # Close Playwright browser if used
+        try:
+            if getattr(self, '_pw_browser', None):
+                try:
+                    self._pw_browser.close()
+                except Exception:
+                    pass
+            if getattr(self, '_pw', None):
+                try:
+                    self._pw.stop()
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
 
 def load_existing_data(username):
@@ -573,6 +846,32 @@ def collect_all_films(username="Agendia", max_pages=None):
     base = f"https://letterboxd.com/{username}/films/page/"
 
     def fetch_page(url):
+        # Prefer Playwright (sync) for fetching rendered pages when available
+        if PLAYWRIGHT_AVAILABLE:
+            try:
+                p = sync_playwright().start()
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+                page.goto(url, timeout=15000)
+                html = page.content()
+                try:
+                    page.close()
+                except Exception:
+                    pass
+                try:
+                    browser.close()
+                except Exception:
+                    pass
+                try:
+                    p.stop()
+                except Exception:
+                    pass
+                return html
+            except Exception as e:
+                if True:
+                    print(f"Playwright fetch failed for {url}: {e}")
+                # fall through to requests fallback
+
         try:
             resp = requests.get(url, headers=session_headers, timeout=12)
             resp.raise_for_status()
@@ -814,8 +1113,9 @@ def main():
         print(f"STARTING SCRAPE")
         print(f"{'='*50}")
         
-        scraper = FilmScraper(use_selenium=True, browser='chrome', debug=True)
-        newly_scraped = scraper.scrape_all_films(new_films)
+        # Prefer Playwright for scraping and run with parallel workers for speed
+        scraper = FilmScraper(use_playwright=True, use_selenium=False, debug=True)
+        newly_scraped = scraper.scrape_all_films(new_films, parallel_workers=10)
         
         # Step 4: Merge with existing data
         print(f"\n{'='*50}")
