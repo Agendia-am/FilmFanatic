@@ -919,17 +919,38 @@ def merge_film_data(existing_films, new_films):
     return sorted(films_dict.values(), key=lambda x: x.get('title', '').lower())
 
 
-def collect_popular_films(max_films=500, min_pages=10):
+def collect_popular_films(max_films=500, min_pages=10, use_cache=True, cache_days=7):
     """
     Collect popular/trending films from Letterboxd that can be used for recommendations
     
     Args:
         max_films: Maximum number of films to collect
         min_pages: Minimum number of pages to scrape from each category
+        use_cache: Whether to use cached data if available
+        cache_days: Number of days before cache expires (default: 7)
     
     Returns:
         List of film dictionaries with basic info
     """
+    cache_file = Path('letterboxd_popular_cache.json')
+    
+    # Check if we can use cached data
+    if use_cache and cache_file.exists():
+        try:
+            cache_age_days = (time.time() - cache_file.stat().st_mtime) / 86400
+            if cache_age_days < cache_days:
+                print(f"\n{'='*60}")
+                print(f"LOADING POPULAR FILMS FROM CACHE")
+                print(f"{'='*60}")
+                with open(cache_file, 'r', encoding='utf-8') as f:
+                    cached_data = json.load(f)
+                print(f"✅ Loaded {len(cached_data)} popular films from cache (age: {cache_age_days:.1f} days)")
+                return cached_data[:max_films]
+            else:
+                print(f"\nℹ️  Cache is {cache_age_days:.1f} days old (expired after {cache_days} days)")
+        except Exception as e:
+            print(f"\n⚠️  Error reading cache: {e}")
+    
     print(f"\n{'='*60}")
     print(f"COLLECTING POPULAR FILMS FROM LETTERBOXD")
     print(f"{'='*60}")
@@ -1052,8 +1073,17 @@ def collect_popular_films(max_films=500, min_pages=10):
             
             time.sleep(0.5)  # Be nice to Letterboxd
     
-    print(f"\n✅ Collected {len(all_films)} popular films from Letterboxd")
-    return all_films[:max_films]
+    # Save to cache
+    result_films = all_films[:max_films]
+    try:
+        with open(cache_file, 'w', encoding='utf-8') as f:
+            json.dump(result_films, f, indent=2, ensure_ascii=False)
+        print(f"\n💾 Saved {len(result_films)} films to cache: {cache_file}")
+    except Exception as e:
+        print(f"\n⚠️  Could not save cache: {e}")
+    
+    print(f"\n✅ Collected {len(result_films)} popular films from Letterboxd")
+    return result_films
 
 
 def collect_all_films(username="Agendia", max_pages=None):

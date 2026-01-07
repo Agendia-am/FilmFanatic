@@ -346,7 +346,7 @@ def load_user_data(username):
     return None
 
 
-def generate_recommendations(username, top_n=10, fetch_popular=True, popular_count=500):
+def generate_recommendations(username, top_n=10, fetch_popular=True, popular_count=500, use_cache=True, cache_days=7):
     """
     Main function to generate movie recommendations
     
@@ -355,6 +355,8 @@ def generate_recommendations(username, top_n=10, fetch_popular=True, popular_cou
         top_n: Number of recommendations to return (default 10)
         fetch_popular: Whether to fetch popular films from Letterboxd (default True)
         popular_count: Number of popular films to fetch (default 500)
+        use_cache: Whether to use cached popular films (default True)
+        cache_days: Cache expiration in days (default 7)
     
     Returns:
         List of recommended films with explanations
@@ -384,8 +386,9 @@ def generate_recommendations(username, top_n=10, fetch_popular=True, popular_cou
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
             from LetterboxdNew import collect_popular_films
             
-            # Fetch popular films
-            popular_films = collect_popular_films(max_films=popular_count, min_pages=10)
+            # Fetch popular films (using cache if available)
+            popular_films = collect_popular_films(max_films=popular_count, min_pages=10, 
+                                                  use_cache=use_cache, cache_days=cache_days)
             
             if popular_films:
                 # Filter out movies the user has already watched
