@@ -391,6 +391,8 @@ def generate_recommendations(username, top_n=10, fetch_popular=True, popular_cou
                                                   use_cache=use_cache, cache_days=cache_days)
             
             if popular_films:
+                print(f"✅ Loaded {len(popular_films)} popular films (cached with full details)")
+                
                 # Filter out movies the user has already watched
                 watched_urls = set(film.get('url') for film in watched_films if film.get('url'))
                 watched_titles = set(film.get('title', '').lower().strip() for film in watched_films if film.get('title'))
@@ -405,53 +407,21 @@ def generate_recommendations(username, top_n=10, fetch_popular=True, popular_cou
                     if movie_url not in watched_urls and movie_title not in watched_titles:
                         unwatched_popular.append(movie)
                 
-                print(f"✅ Found {len(unwatched_popular)} unwatched films from Letterboxd")
-                popular_films = unwatched_popular
+                print(f"✅ Found {len(unwatched_popular)} unwatched films (filtered from cache)")
+                all_films = watched_films + unwatched_popular
+            else:
+                print("⚠️  No popular films available")
+                all_films = watched_films
         except Exception as e:
             print(f"⚠️  Error fetching popular films: {e}")
             print("Continuing with only your watched films...")
-            popular_films = []
-    
-    # Combine datasets: watched films + unwatched popular films
-    if popular_films:
-        # Now scrape details for popular films
-        print(f"\n📥 Scraping details for {len(popular_films)} popular films...")
-        print("(This may take a few minutes...)")
-        
-        try:
-            from LetterboxdNew import FilmScraper
-            scraper = FilmScraper(use_playwright=True, use_selenium=False, debug=False)
-            
-            # Scrape popular films in batches with progress
-            from tqdm import tqdm
-            detailed_popular = []
-            
-            for film in tqdm(popular_films, desc="Scraping popular films", unit="film"):
-                film_url = film.get('url')
-                if film_url:
-                    details = scraper.scrape_film_details(film_url)
-                    if details and details.get('scrape_status') == 'success':
-                        detailed_popular.append(details)
-                    
-                    # Stop if we have enough
-                    if len(detailed_popular) >= popular_count:
-                        break
-            
-            print(f"✅ Scraped details for {len(detailed_popular)} films")
-            popular_films = detailed_popular
-            
-        except Exception as e:
-            print(f"⚠️  Error scraping details: {e}")
-            print("Using popular films without full details...")
-    
-    # Combine datasets
-    if popular_films:
-        all_films = watched_films + popular_films
-        print(f"\n📚 Total dataset: {len(all_films)} films ({len(watched_films)} watched + {len(popular_films)} unwatched)")
+            all_films = watched_films
     else:
         all_films = watched_films
         print(f"\n⚠️  Working with only your watched films ({len(watched_films)} films)")
         print("     Recommendations may include films you've already seen.")
+    
+    print(f"\n📚 Total dataset: {len(all_films)} films")
     
     # Initialize recommender with combined dataset
     recommender = MovieRecommender(all_films)

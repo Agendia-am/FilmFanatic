@@ -7,7 +7,9 @@ import json
 from pathlib import Path
 import time
 
-CACHE_FILE = Path('letterboxd_popular_cache.json')
+# Use absolute path
+script_dir = Path(__file__).parent
+CACHE_FILE = script_dir / 'letterboxd_popular_cache.json'
 
 
 def check_cache():

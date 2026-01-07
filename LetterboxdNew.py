@@ -932,7 +932,9 @@ def collect_popular_films(max_films=500, min_pages=10, use_cache=True, cache_day
     Returns:
         List of film dictionaries with basic info
     """
-    cache_file = Path('letterboxd_popular_cache.json')
+    # Use absolute path so cache works regardless of where script is run from
+    script_dir = Path(__file__).parent if '__file__' in globals() else Path.cwd()
+    cache_file = script_dir / 'letterboxd_popular_cache.json'
     
     # Check if we can use cached data
     if use_cache and cache_file.exists():
@@ -1073,12 +1075,42 @@ def collect_popular_films(max_films=500, min_pages=10, use_cache=True, cache_day
             
             time.sleep(0.5)  # Be nice to Letterboxd
     
+    # Now scrape detailed information for all films using parallel scraping
+    print(f"\n{'='*60}")
+    print(f"SCRAPING DETAILED INFORMATION FOR {len(all_films[:max_films])} FILMS")
+    print(f"{'='*60}")
+    
+    # Use parallel scraping for speed
+    try:
+        print(f"\n⏳ Scraping with 10 parallel workers (this may take 5-10 minutes)...")
+        
+        # Use scrape_all_films with parallel workers
+        detailed_films = scraper.scrape_all_films(
+            all_films[:max_films], 
+            max_films=max_films,
+            parallel_workers=10
+        )
+        
+        # Filter only successful scrapes
+        successful_films = [f for f in detailed_films if f.get('scrape_status') == 'success']
+        
+        print(f"\n✅ Successfully scraped details for {len(successful_films)}/{len(all_films[:max_films])} films")
+        detailed_films = successful_films
+        
+    except Exception as e:
+        print(f"\n⚠️  Error during detailed scraping: {e}")
+        print(f"Falling back to basic film info...")
+        detailed_films = all_films[:max_films]
+    finally:
+        # Clean up scraper resources
+        scraper.cleanup()
+    
     # Save to cache
-    result_films = all_films[:max_films]
+    result_films = detailed_films if detailed_films else all_films[:max_films]
     try:
         with open(cache_file, 'w', encoding='utf-8') as f:
             json.dump(result_films, f, indent=2, ensure_ascii=False)
-        print(f"\n💾 Saved {len(result_films)} films to cache: {cache_file}")
+        print(f"\n💾 Saved {len(result_films)} films with full details to cache: {cache_file}")
     except Exception as e:
         print(f"\n⚠️  Could not save cache: {e}")
     
