@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letterboxd Analyzer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Home Screen -->
+    <div id="homeScreen" class="screen active">
+        <div class="container">
+            <div class="hero">
+                <h1>🎬 Letterboxd Analyzer</h1>
+                <p class="subtitle">Analyze your movie watching habits and get personalized recommendations</p>
+            </div>
+            
+            <div class="input-section">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="usernameInput" 
+                        placeholder="Enter your Letterboxd username"
+                        autocomplete="off"
+                    >
+                    <button id="analyzeBtn" class="btn-primary">Analyze Profile</button>
+                </div>
+                <p class="hint">Example: rjbritton08</p>
+            </div>
+            
+            <div id="errorMessage" class="error-message hidden"></div>
+        </div>
+    </div>
+    
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="screen">
+        <div class="container">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <h2 id="loadingTitle">Scraping Profile...</h2>
+                <p id="loadingMessage">This may take a few minutes depending on your collection size</p>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <p id="progressText" class="progress-text">0%</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dashboard Screen -->
+    <div id="dashboardScreen" class="screen">
+        <div class="navbar">
+            <div class="nav-content">
+                <h2 id="dashboardTitle">📊 Dashboard</h2>
+                <button id="backBtn" class="btn-secondary">← New Search</button>
+            </div>
+        </div>
+        
+        <div class="dashboard-container">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">🎥</div>
+                    <div class="stat-value" id="totalFilms">0</div>
+                    <div class="stat-label">Total Films</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-value" id="avgRating">0</div>
+                    <div class="stat-label">Average Rating</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-value" id="totalRuntime">0h</div>
+                    <div class="stat-label">Total Watch Time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💯</div>
+                    <div class="stat-value" id="ratedFilms">0</div>
+                    <div class="stat-label">Films Rated</div>
+                </div>
+            </div>
+            
+            <!-- Recommendations Section -->
+            <div class="section">
+                <div class="section-header">
+                    <h3>🎬 Recommended Movies for You</h3>
+                    <button id="refreshRecommendations" class="btn-icon" title="Refresh recommendations">
+                        🔄
+                    </button>
+                </div>
+                <div id="recommendationsLoading" class="loading-placeholder hidden">
+                    <div class="spinner-small"></div>
+                    <p>Generating recommendations...</p>
+                </div>
+                <div id="recommendationsGrid" class="recommendations-grid"></div>
+                <div id="recommendationsError" class="error-message hidden"></div>
+            </div>
+            
+            <!-- Charts Section -->
+            <div class="section">
+                <h3>📊 Your Viewing Statistics</h3>
+                <div class="charts-grid">
+                    <div class="chart-card chart-card-wide">
+                        <h4>🗺️ Countries of Movies Seen</h4>
+                        <canvas id="countryMapChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>⭐ Personal Rating by Genre</h4>
+                        <canvas id="genreRatingChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>🌐 Languages Watched</h4>
+                        <canvas id="languagePieChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>📅 Personal Ratings by Decade</h4>
+                        <canvas id="decadeRatingsChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>🎬 Actor-Director Collaborations</h4>
+                        <canvas id="actorDirectorChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>🎵 Composer-Director Collaborations</h4>
+                        <canvas id="composerDirectorChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>🏢 Studios Average Community Rating</h4>
+                        <canvas id="studioRatingChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>⏱️ Runtime vs Personal Rating</h4>
+                        <canvas id="runtimeRatingChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Top Lists Section -->
+            <div class="lists-grid">
+                <div class="list-card">
+                    <h4>🎭 Top Genres</h4>
+                    <div id="topGenresList" class="list-content"></div>
+                </div>
+                <div class="list-card">
+                    <h4>🎬 Top Directors</h4>
+                    <div id="topDirectorsList" class="list-content"></div>
+                </div>
+                <div class="list-card">
+                    <h4>⭐ Top Actors</h4>
+                    <div id="topActorsList" class="list-content"></div>
+                </div>
+                <div class="list-card">
+                    <h4>🏢 Top Studios</h4>
+                    <div id="topStudiosList" class="list-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
