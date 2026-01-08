@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Letterboxd Analyzer</title>
+    <title>Film Fanatic</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div id="homeScreen" class="screen active">
         <div class="container">
             <div class="hero">
-                <h1>🎬 Letterboxd Analyzer</h1>
+                <h1>🎬 Film Fanatic</h1>
                 <p class="subtitle">Analyze your movie watching habits and get personalized recommendations</p>
             </div>
             
@@ -109,7 +109,7 @@
                         <h4>⭐ Personal Rating by Genre</h4>
                         <canvas id="genreRatingChart"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card chart-card-wide" style="transform: scale(0.64); transform-origin: center;">
                         <h4>🌐 Languages Watched</h4>
                         <canvas id="languagePieChart"></canvas>
                     </div>
@@ -117,7 +117,7 @@
                         <h4>📅 Personal Ratings by Decade</h4>
                         <canvas id="decadeRatingsChart"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card chart-card-wide">
                         <h4>🎬 Actor-Director Collaborations</h4>
                         <canvas id="actorDirectorChart"></canvas>
                     </div>
@@ -125,7 +125,7 @@
                         <h4>🎵 Composer-Director Collaborations</h4>
                         <canvas id="composerDirectorChart"></canvas>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card chart-card-wide">
                         <h4>🏢 Studios Average Community Rating</h4>
                         <canvas id="studioRatingChart"></canvas>
                     </div>
@@ -159,6 +159,9 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@2.3.0/dist/chartjs-chart-treemap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-geo@4.2.7/build/index.umd.min.js"></script>
+    <script src="https://unpkg.com/topojson-client@3"></script>
     <script src="app.js"></script>
 </body>
 </html>

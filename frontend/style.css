@@ -1,4 +1,4 @@
-/* Letterboxd Analyzer - Styles */
+/* Film Fanatic - Styles */
 
 /* Color Scheme - Letterboxd inspired */
 :root {
@@ -378,14 +378,15 @@ input[type="text"]:focus {
 /* Charts Grid */
 .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(800px, 1fr));
     gap: 24px;
 }
 
 .chart-card {
     background: var(--bg-card);
-    padding: 24px;
+    padding: 48px;
     border-radius: 8px;
+    min-height: 600px;
 }
 
 .chart-card-wide {

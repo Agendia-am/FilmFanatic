@@ -1,4 +1,4 @@
-// Letterboxd Analyzer - Frontend JavaScript
+// Film Fanatic - Frontend JavaScript
 
 const API_BASE = 'http://localhost:5005/api';
 
@@ -169,16 +169,10 @@ function populateCharts(data) {
         }
     });
     const topCountries = Object.entries(countryCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 20);
+        .sort((a, b) => b[1] - a[1]);
     
     console.log('Country chart data:', topCountries);
-    createHorizontalBarChart('countryMapChart',
-        topCountries.map(c => c[0]),
-        topCountries.map(c => c[1]),
-        'Films Watched',
-        '#00e054'
-    );
+    createGeoChart('countryMapChart', topCountries);
     
     // 2. Personal Rating by Genre (bar chart)
     const genreRatings = {};
@@ -261,15 +255,9 @@ function populateCharts(data) {
             data.count
         ])
         .sort((a, b) => b[2] - a[2]) // Sort by count
-        .slice(0, 15);
+        .slice(0, 20);
     
-    createCollabChart('actorDirectorChart',
-        topActorDirector.map(c => c[0]),
-        topActorDirector.map(c => c[1].toFixed(2)),
-        topActorDirector.map(c => c[2]),
-        'Avg Community Rating',
-        '#9b59b6'
-    );
+    createBubbleChart('actorDirectorChart', topActorDirector, 'Actor-Director Collaborations', '#9b59b6');
     
     // 6. Composer-Director Collaborations with Avg Rating
     const composerDirectorCollabs = {};
@@ -294,15 +282,9 @@ function populateCharts(data) {
             data.count
         ])
         .sort((a, b) => b[2] - a[2]) // Sort by count
-        .slice(0, 15);
+        .slice(0, 20);
     
-    createCollabChart('composerDirectorChart',
-        topComposerDirector.map(c => c[0]),
-        topComposerDirector.map(c => c[1].toFixed(2)),
-        topComposerDirector.map(c => c[2]),
-        'Avg Community Rating',
-        '#e74c3c'
-    );
+    createBubbleChart('composerDirectorChart', topComposerDirector, 'Composer-Director Collaborations', '#e74c3c');
     
     // 7. Studios Average Community Rating
     const studioRatings = {};
@@ -900,55 +882,326 @@ function createCandlestickChart(canvasId, labels, dataDict) {
     });
 }
 
-function createCollabChart(canvasId, labels, ratings, counts, label, color) {
+function createTreemapChart(canvasId, data, title, baseColor) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     
+    // Prepare treemap data with size based on count and color based on rating
+    const treemapData = data.map(item => ({
+        label: item.label,
+        value: item.count,
+        rating: item.rating,
+        count: item.count
+    }));
+    
     chartInstances[canvasId] = new Chart(ctx, {
-        type: 'bar',
+        type: 'treemap',
         data: {
-            labels: labels,
             datasets: [{
-                label: label,
-                data: ratings,
-                backgroundColor: color,
-                borderColor: color,
-                borderWidth: 1
+                label: title,
+                tree: treemapData,
+                key: 'value',
+                groups: ['label'],
+                spacing: 1,
+                borderWidth: 2,
+                borderColor: '#14181c',
+                backgroundColor: (ctx) => {
+                    if (!ctx.raw) return baseColor;
+                    const rating = ctx.raw._data.rating;
+                    // Color gradient based on rating (darker = lower, brighter = higher)
+                    const alpha = 0.4 + (rating / 5) * 0.6;
+                    return baseColor + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+                },
+                labels: {
+                    display: true,
+                    formatter: (ctx) => {
+                        if (!ctx.raw) return '';
+                        const words = ctx.raw._data.label.split(' ');
+                        // Split long labels into multiple lines
+                        if (words.length > 3) {
+                            const mid = Math.ceil(words.length / 2);
+                            return [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
+                        }
+                        return ctx.raw._data.label;
+                    },
+                    color: '#fff',
+                    font: {
+                        size: 11,
+                        weight: 'bold'
+                    },
+                    padding: 3
+                }
             }]
         },
         options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
+                title: {
+                    display: true,
+                    text: title,
+                    color: '#9ab',
+                    font: { size: 14 }
+                },
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        afterLabel: function(context) {
-                            return `Films together: ${counts[context.dataIndex]}`;
+                        title: (context) => {
+                            return context[0].raw._data.label;
+                        },
+                        label: (context) => {
+                            const data = context.raw._data;
+                            return [
+                                `Films together: ${data.count}`,
+                                `Avg Rating: ${data.rating.toFixed(2)}/5`
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createBubbleChart(canvasId, collaborations, title, color) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Transform collaboration data into bubble chart format
+    const bubbleData = collaborations.map(([collab, rating, count]) => ({
+        x: rating,
+        y: count,
+        r: Math.sqrt(count) * 5,
+        label: collab,
+        rating: rating,
+        count: count
+    }));
+    
+    chartInstances[canvasId] = new Chart(ctx, {
+        type: 'bubble',
+        data: {
+            datasets: [{
+                label: title,
+                data: bubbleData,
+                backgroundColor: color + 'aa',
+                borderColor: color,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: title,
+                    color: '#9ab',
+                    font: { size: 14 }
+                },
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        title: (context) => {
+                            return context[0].raw.label;
+                        },
+                        label: (context) => {
+                            const data = context.raw;
+                            return [
+                                `Films together: ${data.count}`,
+                                `Avg Rating: ${data.rating.toFixed(2)}/5`
+                            ];
                         }
                     }
                 }
             },
             scales: {
-                x: { 
-                    beginAtZero: true,
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Average Community Rating',
+                        color: '#9ab'
+                    },
+                    min: 2,
                     max: 5,
-                    title: { display: true, text: 'Avg Community Rating', color: '#9ab' },
-                    ticks: { color: '#9ab' },
-                    grid: { color: '#456' }
+                    ticks: {
+                        color: '#9ab',
+                        stepSize: 0.5
+                    },
+                    grid: {
+                        color: '#456'
+                    }
                 },
                 y: {
-                    ticks: { 
-                        color: '#9ab',
-                        font: { size: 10 }
+                    title: {
+                        display: true,
+                        text: 'Number of Films Together',
+                        color: '#9ab'
                     },
-                    grid: { display: false }
+                    beginAtZero: true,
+                    ticks: {
+                        color: '#9ab',
+                        stepSize: 1
+                    },
+                    grid: {
+                        color: '#456'
+                    }
                 }
             }
         }
     });
+}
+
+function createGeoChart(canvasId, countryData) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Country name mapping for common variations
+    const countryNameMap = {
+        'usa': 'United States of America',
+        'united states': 'United States of America',
+        'us': 'United States of America',
+        'uk': 'United Kingdom',
+        'britain': 'United Kingdom',
+        'great britain': 'United Kingdom',
+        'england': 'United Kingdom',
+        'south korea': 'South Korea',
+        'korea': 'South Korea',
+        'russia': 'Russia',
+        'soviet union': 'Russia',
+        'ussr': 'Russia',
+        'czech republic': 'Czechia',
+        'netherlands': 'Netherlands',
+        'holland': 'Netherlands',
+        'germany': 'Germany',
+        'west germany': 'Germany',
+        'east germany': 'Germany',
+        'france': 'France',
+        'spain': 'Spain',
+        'italy': 'Italy',
+        'japan': 'Japan',
+        'china': 'China',
+        'hong kong': 'China',
+        'india': 'India',
+        'canada': 'Canada',
+        'australia': 'Australia',
+        'mexico': 'Mexico',
+        'brazil': 'Brazil',
+        'argentina': 'Argentina',
+        'sweden': 'Sweden',
+        'norway': 'Norway',
+        'denmark': 'Denmark',
+        'poland': 'Poland',
+        'ireland': 'Ireland',
+        'new zealand': 'New Zealand',
+        'belgium': 'Belgium',
+        'switzerland': 'Switzerland',
+        'austria': 'Austria',
+        'portugal': 'Portugal',
+        'greece': 'Greece',
+        'turkey': 'Turkey',
+        'iran': 'Iran',
+        'egypt': 'Egypt',
+        'south africa': 'South Africa',
+        'taiwan': 'Taiwan'
+    };
+    
+    // Load world map data
+    fetch('https://unpkg.com/world-atlas@2/countries-50m.json')
+        .then(response => response.json())
+        .then(worldData => {
+            const countries = ChartGeo.topojson.feature(worldData, worldData.objects.countries).features;
+            
+            // Create a map of standardized country names to film counts
+            const countryMap = {};
+            countryData.forEach(([name, count]) => {
+                const normalizedName = name.toLowerCase().trim();
+                const standardName = countryNameMap[normalizedName] || name;
+                if (countryMap[standardName]) {
+                    countryMap[standardName] += count;
+                } else {
+                    countryMap[standardName] = count;
+                }
+            });
+            
+            console.log('Country mapping:', countryMap);
+            
+            // Map the data to country features
+            const chartData = countries.map(country => {
+                const countryName = country.properties.name;
+                const value = countryMap[countryName] || 0;
+                return {
+                    feature: country,
+                    value: value
+                };
+            });
+            
+            chartInstances[canvasId] = new Chart(ctx, {
+                type: 'choropleth',
+                data: {
+                    labels: countries.map(c => c.properties.name),
+                    datasets: [{
+                        label: 'Films Watched',
+                        data: chartData,
+                        backgroundColor: (context) => {
+                            if (!context.raw || !context.raw.value) return 'rgba(200, 200, 200, 0.3)';
+                            const value = context.raw.value;
+                            const maxValue = Math.max(...countryData.map(c => c[1]));
+                            const intensity = value / maxValue;
+                            // Green gradient from light to bright Letterboxd green
+                            return `rgba(0, 224, 84, ${0.3 + intensity * 0.7})`;
+                        },
+                        borderColor: '#456',
+                        borderWidth: 0.5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: ['Films by Country of Origin', '(Co-productions counted for each country)'],
+                            color: '#9ab',
+                            font: { size: 14 }
+                        },
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const value = context.raw.value;
+                                    if (value === 0) return 'No films watched';
+                                    return `${value} film${value !== 1 ? 's' : ''}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        projection: {
+                            axis: 'x',
+                            projection: 'equalEarth'
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error loading map data:', error);
+            // Fallback to horizontal bar chart
+            const topCountries = countryData.slice(0, 20);
+            createHorizontalBarChart(canvasId,
+                topCountries.map(c => c[0]),
+                topCountries.map(c => c[1]),
+                'Films Watched',
+                '#00e054'
+            );
+        });
 }
 
 // Utility Functions
@@ -988,4 +1241,4 @@ function goHome() {
 }
 
 // Initialize
-console.log('Letterboxd Analyzer initialized');
+console.log('Film Fanatic initialized');
