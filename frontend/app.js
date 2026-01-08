@@ -338,6 +338,33 @@ function populateCharts(data) {
             'Personal Rating'
         );
     }
+    
+    // 9. Personal vs Average Ratings Area Chart (by year)
+    const yearlyRatings = {};
+    data.films.forEach(film => {
+        if (film.personal_rating && film.average_rating) {
+            const year = parseInt(film.year || film.release_date);
+            if (!year || isNaN(year)) return;
+            
+            if (!yearlyRatings[year]) {
+                yearlyRatings[year] = { personalRatings: [], avgRatings: [], count: 0 };
+            }
+            yearlyRatings[year].personalRatings.push(parseFloat(film.personal_rating));
+            yearlyRatings[year].avgRatings.push(parseFloat(film.average_rating));
+            yearlyRatings[year].count++;
+        }
+    });
+    
+    const ratingsComparison = Object.entries(yearlyRatings)
+        .map(([year, data]) => ({
+            year: parseInt(year),
+            personal: data.personalRatings.reduce((a, b) => a + b, 0) / data.personalRatings.length,
+            average: data.avgRatings.reduce((a, b) => a + b, 0) / data.avgRatings.length,
+            count: data.count
+        }))
+        .sort((a, b) => a.year - b.year);
+    
+    createAreaComparisonChart('personalVsAvgChart', ratingsComparison);
 }
 
 function displayRecommendations(recommendations) {
@@ -791,6 +818,110 @@ function createPieChart(canvasId, labels, data) {
                             return `${context.label}: ${context.raw} films (${percentage}%)`;
                         }
                     }
+                }
+            }
+        }
+    });
+}
+
+function createAreaComparisonChart(canvasId, ratingsData) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Create labels (years)
+    const labels = ratingsData.map(d => d.year);
+    
+    chartInstances[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Personal Rating',
+                    data: ratingsData.map(d => d.personal),
+                    backgroundColor: 'rgba(0, 224, 84, 0.3)',
+                    borderColor: '#00e054',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                },
+                {
+                    label: 'Community Average',
+                    data: ratingsData.map(d => d.average),
+                    backgroundColor: 'rgba(255, 128, 0, 0.3)',
+                    borderColor: '#ff8000',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Average Ratings by Year: Personal vs Community',
+                    color: '#9ab',
+                    font: { size: 14 }
+                },
+                legend: {
+                    display: true,
+                    labels: { color: '#9ab' }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: (context) => {
+                            const index = context[0].dataIndex;
+                            return `Year: ${ratingsData[index].year}`;
+                        },
+                        afterTitle: (context) => {
+                            const index = context[0].dataIndex;
+                            return `${ratingsData[index].count} film${ratingsData[index].count !== 1 ? 's' : ''} rated`;
+                        },
+                        label: (context) => {
+                            return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}/5`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { 
+                        display: true, 
+                        text: 'Year', 
+                        color: '#9ab' 
+                    },
+                    ticks: { 
+                        color: '#9ab',
+                        maxRotation: 45,
+                        minRotation: 0
+                    },
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: 5,
+                    title: { 
+                        display: true, 
+                        text: 'Average Rating', 
+                        color: '#9ab' 
+                    },
+                    ticks: { 
+                        color: '#9ab',
+                        stepSize: 0.5
+                    },
+                    grid: { color: '#456' }
                 }
             }
         }
