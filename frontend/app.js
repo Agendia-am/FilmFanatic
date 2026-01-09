@@ -50,10 +50,10 @@ async function handleAnalyze() {
     let progress = 0;
     const progressInterval = setInterval(() => {
         if (progress < 90) {
-            progress += Math.random() * 3;
+            progress += Math.random() * 1.2;
             updateLoading('Scraping Profile...', `Processing films from ${username}'s profile`, Math.min(90, progress));
         }
-    }, 500);
+    }, 900);
     
     try {
         // Step 1: Scrape profile
@@ -1411,7 +1411,7 @@ function updateLoading(title, message, progress) {
     loadingTitle.textContent = title;
     loadingMessage.textContent = message;
     progressFill.style.width = `${progress}%`;
-    progressText.textContent = `${progress}%`;
+    progressText.textContent = `${Math.round(progress)}%`;
 }
 
 function showError(message) {
