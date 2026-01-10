@@ -12,10 +12,14 @@ let chartInstances = {};
 const homeScreen = document.getElementById('homeScreen');
 const loadingScreen = document.getElementById('loadingScreen');
 const dashboardScreen = document.getElementById('dashboardScreen');
+const visualsScreen = document.getElementById('visualsScreen');
 
 const usernameInput = document.getElementById('usernameInput');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const backBtn = document.getElementById('backBtn');
+const openVisualsBtn = document.getElementById('openVisualsBtn');
+const visualsBackBtn = document.getElementById('visualsBackBtn');
+const visualsHomeBtn = document.getElementById('visualsHomeBtn');
 const refreshRecommendations = document.getElementById('refreshRecommendations');
 
 const errorMessage = document.getElementById('errorMessage');
@@ -27,6 +31,15 @@ const progressText = document.getElementById('progressText');
 // Event Listeners
 analyzeBtn.addEventListener('click', handleAnalyze);
 backBtn.addEventListener('click', goHome);
+if (openVisualsBtn) {
+    openVisualsBtn.addEventListener('click', () => showScreen('visuals'));
+}
+if (visualsBackBtn) {
+    visualsBackBtn.addEventListener('click', () => showScreen('dashboard'));
+}
+if (visualsHomeBtn) {
+    visualsHomeBtn.addEventListener('click', goHome);
+}
 refreshRecommendations.addEventListener('click', loadRecommendations);
 
 usernameInput.addEventListener('keypress', (e) => {
@@ -46,14 +59,14 @@ async function handleAnalyze() {
     hideError();
     showScreen('loading');
     
-    // Start simulated progress bar
+    // Start simulated progress bar (slowed down)
     let progress = 0;
     const progressInterval = setInterval(() => {
         if (progress < 90) {
-            progress += Math.random() * 1.2;
+            progress += Math.random() * 0.45; // slower progress
             updateLoading('Scraping Profile...', `Processing films from ${username}'s profile`, Math.min(90, progress));
         }
-    }, 900);
+    }, 1200);
     
     try {
         // Step 1: Scrape profile
@@ -1401,10 +1414,14 @@ function showScreen(screen) {
     homeScreen.classList.remove('active');
     loadingScreen.classList.remove('active');
     dashboardScreen.classList.remove('active');
+    if (visualsScreen) {
+        visualsScreen.classList.remove('active');
+    }
     
     if (screen === 'home') homeScreen.classList.add('active');
     else if (screen === 'loading') loadingScreen.classList.add('active');
     else if (screen === 'dashboard') dashboardScreen.classList.add('active');
+    else if (screen === 'visuals' && visualsScreen) visualsScreen.classList.add('active');
 }
 
 function updateLoading(title, message, progress) {

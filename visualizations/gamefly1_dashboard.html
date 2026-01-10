@@ -1,0 +1,282 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Letterboxd Report - gamefly1</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #14181c;
+                color: white;
+                margin: 0;
+                padding: 20px;
+            }
+            h1 {
+                text-align: center;
+                color: #00e054;
+            }
+            h2 {
+                color: #00e054;
+                text-align: center;
+                margin-top: 40px;
+            }
+            .chart-container {
+                margin: 20px auto;
+                max-width: 1200px;
+            }
+            iframe {
+                width: 100%;
+                border: none;
+            }
+            .recommendations {
+                max-width: 1200px;
+                margin: 40px auto;
+                padding: 30px;
+                background-color: #1c2228;
+                border-radius: 10px;
+                border: 2px solid #00e054;
+            }
+            .recommendation {
+                background-color: #2c3440;
+                padding: 20px;
+                margin: 20px 0;
+                border-radius: 8px;
+                border-left: 4px solid #00e054;
+            }
+            .recommendation h3 {
+                margin-top: 0;
+                color: #00e054;
+                font-size: 1.3em;
+            }
+            .recommendation .info {
+                margin: 10px 0;
+                color: #9ab;
+            }
+            .recommendation .rating {
+                color: #ff8000;
+                font-weight: bold;
+            }
+            .recommendation .genres {
+                color: #678;
+                font-style: italic;
+            }
+            .recommendation .reason {
+                color: #abc;
+                margin: 8px 0;
+                padding-left: 15px;
+                border-left: 2px solid #456;
+            }
+            .recommendation a {
+                color: #00e054;
+                text-decoration: none;
+                display: inline-block;
+                margin-top: 10px;
+            }
+            .recommendation a:hover {
+                text-decoration: underline;
+            }
+            .no-recommendations {
+                text-align: center;
+                color: #9ab;
+                padding: 30px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>📊 Letterboxd Visualization Report: gamefly1</h1>
+    
+        <div class="recommendations">
+            <h2>🎬 Recommended Movies for You</h2>
+            <p style="text-align: center; color: #9ab;">Based on your viewing history and preferences</p>
+        
+            <div class="recommendation">
+                <h3>1. La Haine (1995)</h3>
+                <div class="info">
+                    <span class="rating">⭐ 4.5/5</span> • 
+                    <span class="genres">🎭 Drama</span>
+                </div>
+                <div class="info">🎬 Director: Mathieu Kassovitz</div>
+            <div style="margin-top: 15px;"><div class="reason">💡 Genres you love: Drama</div><div class="reason">💡 High community rating: 4.5/5</div></div>
+                <a href="https://letterboxd.com/film/la-haine/" target="_blank">View on Letterboxd →</a>
+            </div>
+            
+            <div class="recommendation">
+                <h3>2. Fargo (1996)</h3>
+                <div class="info">
+                    <span class="rating">⭐ 4.17/5</span> • 
+                    <span class="genres">🎭 Crime, Comedy, Drama</span>
+                </div>
+                <div class="info">🎬 Director: Joel Coen</div>
+            <div style="margin-top: 15px;"><div class="reason">💡 Genres you love: Thriller, Crime, Comedy</div><div class="reason">💡 High community rating: 4.2/5</div></div>
+                <a href="https://letterboxd.com/film/fargo/" target="_blank">View on Letterboxd →</a>
+            </div>
+            
+            <div class="recommendation">
+                <h3>3. Casablanca (1942)</h3>
+                <div class="info">
+                    <span class="rating">⭐ 4.28/5</span> • 
+                    <span class="genres">🎭 Drama, Romance</span>
+                </div>
+                <div class="info">🎬 Director: Michael Curtiz</div>
+            <div style="margin-top: 15px;"><div class="reason">💡 Genres you love: Drama</div><div class="reason">💡 High community rating: 4.3/5</div></div>
+                <a href="https://letterboxd.com/film/casablanca/" target="_blank">View on Letterboxd →</a>
+            </div>
+            
+            <div class="recommendation">
+                <h3>4. Adolescence (2025)</h3>
+                <div class="info">
+                    <span class="rating">⭐ 4.07/5</span> • 
+                    <span class="genres">🎭 Drama, Crime</span>
+                </div>
+                <div class="info">🎬 Director: Philip Barantini</div>
+            <div style="margin-top: 15px;"><div class="reason">💡 Genres you love: Crime, Drama</div><div class="reason">💡 High community rating: 4.1/5</div></div>
+                <a href="https://letterboxd.com/film/adolescence-2025/" target="_blank">View on Letterboxd →</a>
+            </div>
+            
+            <div class="recommendation">
+                <h3>5. Mr. & Mrs. Smith (2005)</h3>
+                <div class="info">
+                    <span class="rating">⭐ 3.3/5</span> • 
+                    <span class="genres">🎭 Drama, Thriller, Action</span>
+                </div>
+                <div class="info">🎬 Director: Doug Liman</div>
+            <div style="margin-top: 15px;"><div class="reason">💡 Genres you love: Thriller, Drama, Comedy</div><div class="reason">💡 Actors you like: Brad Pitt</div></div>
+                <a href="https://letterboxd.com/film/mr-mrs-smith-2005/" target="_blank">View on Letterboxd →</a>
+            </div>
+            
+            <div class="recommendation">
+                <h3>6. 10 Things I Hate About You (1999)</h3>
+                <div class="info">
+                    <span class="rating">⭐ 4.05/5</span> • 
+                    <span class="genres">🎭 Comedy, Drama, Romance</span>
+                </div>
+                <div class="info">🎬 Director: Gil Junger</div>
+            <div style="margin-top: 15px;"><div class="reason">💡 Genres you love: Comedy, Drama</div><div class="reason">💡 High community rating: 4.0/5</div></div>
+                <a href="https://letterboxd.com/film/10-things-i-hate-about-you/" target="_blank">View on Letterboxd →</a>
+            </div>
+            
+            <div class="recommendation">
+                <h3>7. The Worst Person in the World (2021)</h3>
+                <div class="info">
+                    <span class="rating">⭐ 4.08/5</span> • 
+                    <span class="genres">🎭 Drama, Romance, Comedy</span>
+                </div>
+                <div class="info">🎬 Director: Joachim Trier</div>
+            <div style="margin-top: 15px;"><div class="reason">💡 Genres you love: Comedy, Drama</div><div class="reason">💡 High community rating: 4.1/5</div></div>
+                <a href="https://letterboxd.com/film/the-worst-person-in-the-world/" target="_blank">View on Letterboxd →</a>
+            </div>
+            
+            <div class="recommendation">
+                <h3>8. mid90s (2018)</h3>
+                <div class="info">
+                    <span class="rating">⭐ 3.81/5</span> • 
+                    <span class="genres">🎭 Drama, Comedy</span>
+                </div>
+                <div class="info">🎬 Director: Jonah Hill</div>
+            <div style="margin-top: 15px;"><div class="reason">💡 Genres you love: Comedy, Drama</div><div class="reason">💡 High community rating: 3.8/5</div></div>
+                <a href="https://letterboxd.com/film/mid90s/" target="_blank">View on Letterboxd →</a>
+            </div>
+            
+            <div class="recommendation">
+                <h3>9. A Quiet Place (2018)</h3>
+                <div class="info">
+                    <span class="rating">⭐ 3.64/5</span> • 
+                    <span class="genres">🎭 Drama, Science Fiction, Horror</span>
+                </div>
+                <div class="info">🎬 Director: John Krasinski</div>
+            <div style="margin-top: 15px;"><div class="reason">💡 Genres you love: Drama, Horror, Science Fiction</div><div class="reason">💡 High community rating: 3.6/5</div></div>
+                <a href="https://letterboxd.com/film/a-quiet-place-2018/" target="_blank">View on Letterboxd →</a>
+            </div>
+            
+            <div class="recommendation">
+                <h3>10. Triangle of Sadness (2022)</h3>
+                <div class="info">
+                    <span class="rating">⭐ 3.69/5</span> • 
+                    <span class="genres">🎭 Drama, Comedy</span>
+                </div>
+                <div class="info">🎬 Director: Ruben Östlund</div>
+            <div style="margin-top: 15px;"><div class="reason">💡 Genres you love: Comedy, Drama</div><div class="reason">💡 High community rating: 3.7/5</div></div>
+                <a href="https://letterboxd.com/film/triangle-of-sadness/" target="_blank">View on Letterboxd →</a>
+            </div>
+            
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_summary.html" height="500"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_rating_dist.html" height="600"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_rating_comparison.html" height="800"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_films_by_year.html" height="600"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_top_genres.html" height="600"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_top_directors.html" height="700"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_runtime_dist.html" height="600"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_rating_by_decade.html" height="600"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_top_actors.html" height="1000"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_genre_ratings.html" height="700"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_countries.html" height="700"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_rating_by_year.html" height="700"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_studio_ratings.html" height="800"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_director_actor_collab.html" height="900"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_genre_rating_scatter.html" height="900"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_runtime_by_genre.html" height="800"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_actor_rating_count.html" height="1000"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_language_dist.html" height="800"></iframe>
+        </div>
+        
+        <div class="chart-container">
+            <iframe src="gamefly1_composer_actor_rating.html" height="1000"></iframe>
+        </div>
+        
+    </body>
+    </html>
+    
